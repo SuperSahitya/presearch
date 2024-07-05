@@ -4,11 +4,11 @@ import puppeteer from "puppeteer";
 
 interface Body {
   identity: string;
-  prompt: string;
+  searchPrompt: string;
   role: string;
 }
 
-async function getDataFromGoogle() {
+async function getDataFromGoogle(search: string) {
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
   await page.goto("https://www.google.com");
@@ -17,7 +17,7 @@ async function getDataFromGoogle() {
   await page.setViewport({ width: 1080, height: 1024 });
 
   await page.waitForSelector("textarea");
-  await page.type("textarea", "react compiler");
+  await page.type("textarea", search);
   await page.waitForSelector("input");
 
   await page.keyboard.press("Enter");
@@ -35,7 +35,7 @@ async function getDataFromGoogle() {
   const requiredLinks = fullLinks
     .filter((e) => e != "")
     .filter((e) => !e?.startsWith("/search"));
-  console.log("requiredLinks");
+  console.log("Websites received from Google");
   await browser.close();
   return requiredLinks;
 }
@@ -52,7 +52,7 @@ async function getSiteData(url: string) {
   const data = await page.evaluate(() => {
     return document.querySelector("body")!.innerText;
   });
-  console.log("data");
+  console.log("Data scraped from website");
   await browser.close();
   return data;
 }
@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (!body.prompt) {
-    return NextResponse.json("Missing 'prompt' in request body", {
+  if (!body.searchPrompt) {
+    return NextResponse.json("Missing 'searchPrompt' in request body", {
       status: 400,
     });
   }
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json("Missing 'role' in request body", { status: 400 });
   }
 
-  const { prompt, identity, role } = body;
+  const { searchPrompt, identity, role } = body;
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -91,19 +91,23 @@ export async function POST(request: NextRequest) {
       systemInstruction: `You are an expert researcher.You should reply in concise and correct manner and produce great summary if necessary.`,
     });
 
-    const data = await getDataFromGoogle();
-    const myPrompt = await getSiteData(data[0]!);
+    const websiteLinks = await getDataFromGoogle(searchPrompt);
+    const scrapedData = await getSiteData(websiteLinks[0]!);
 
     const responseFromGemini = await model.generateContent(
-      `give me a great summary of this topic from context in a single paragraph, which is concise and doesn't loose too much valuable data. ${myPrompt}`
+      `give me a great summary of this topic from context in a single paragraph, which is concise and doesn't loose too much valuable data. ${scrapedData}`
     );
+
     // const responseFromGemini = await model.generateContent(
     //   `react compiler`
     // );
 
-    console.log("function called")
+    console.log("Gemini API called with the scraped data.");
 
-    return NextResponse.json({ data: responseFromGemini.response.text() });
+    return NextResponse.json({
+      data: responseFromGemini.response.text(),
+      websites: websiteLinks,
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json(error, { status: 500 });

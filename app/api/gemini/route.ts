@@ -9,70 +9,52 @@ interface Body {
 }
 
 async function getDataFromGoogle() {
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
   await page.goto("https://www.google.com");
+  page.setDefaultNavigationTimeout(2 * 60 * 1000);
 
   await page.setViewport({ width: 1080, height: 1024 });
 
-  // Type the search query
-  await page.type("textarea", "puppetter");
-  // await page
-  //   .locator("input")
-  //   .filter((input) => input.value == "Google Search")
-  //   .click();
+  await page.waitForSelector("textarea");
+  await page.type("textarea", "react compiler");
+  await page.waitForSelector("input");
 
-    await page.type('input[name="q"]', "puppeteer");
+  await page.keyboard.press("Enter");
 
-    // await Promise.all([
-    //   page.waitForNavigation(), // Wait for the results page to load
-    //   page.press('input[name="q"]', "Enter"), // Press 'Enter' key to submit the search form
-    // ]);
+  await page.waitForNavigation();
 
-  // Submit the search form
-  // await Promise.all([
-  //   page.waitForNavigation({ timeout: 60000 }), // Wait for the results page to load
-  //   searchInput?.press("Enter"), // Press 'Enter' key to submit
-  // ]);
-
-  // Extract search results
-
-  // await browser.close();
-  const fullTitle = await page.evaluate(async () => {
-    return await page.locator("#res");
+  await page.waitForSelector("#rso a");
+  const fullLinks = await page.evaluate(() => {
+    const links = Array.from(
+      document.querySelectorAll("#rso a")
+    ) as HTMLElement[];
+    return links.map((link: HTMLElement) => link.getAttribute("href"));
   });
 
-  //
-  //
+  const requiredLinks = fullLinks
+    .filter((e) => e != "")
+    .filter((e) => !e?.startsWith("/search"));
+  console.log("requiredLinks");
+  await browser.close();
+  return requiredLinks;
+}
 
-  // const browser = await puppeteer.launch({ headless: false });
-  // const page = await browser.newPage();
+async function getSiteData(url: string) {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.goto(url);
+  // page.setDefaultNavigationTimeout(12000);
+  await page.setViewport({ width: 1080, height: 1024 });
 
-  // // Navigate the page to a URL
-  // await page.goto("https://developer.chrome.com/");
-
-  // // Set screen size
-  // await page.setViewport({ width: 1080, height: 1024 });
-
-  // // Type into search box
-  // await page.type(".devsite-search-field", "automate beyond recorder");
-
-  // // Wait and click on first result
-  // const searchResultSelector = ".devsite-result-item-link";
-  // await page.waitForSelector(searchResultSelector);
-  // await page.click(searchResultSelector);
-
-  // // Locate the full title with a unique string
-  // const textSelector = await page.waitForSelector(
-  //   "text/Customize and automate"
-  // );
-  // const fullTitle = await textSelector?.evaluate((el) => el.textContent);
-
-  // // Print the full title
-  // console.log('The title of this blog post is "%s".', fullTitle);
-
-  // await browser.close();
-  // return fullTitle;
+  // await page.waitForNavigation({ timeout: 12000 });
+  await page.waitForSelector("body");
+  const data = await page.evaluate(() => {
+    return document.querySelector("body")!.innerText;
+  });
+  console.log("data");
+  await browser.close();
+  return data;
 }
 
 export async function POST(request: NextRequest) {
@@ -106,15 +88,22 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      systemInstruction: `You are an expert writer.`,
+      systemInstruction: `You are an expert researcher.You should reply in concise and correct manner and produce great summary if necessary.`,
     });
 
-    // const result = await model.generateContent(prompt);
-    // const response = await result.response;
-    // const text = await response.text(); // Correctly await the text response
+    const data = await getDataFromGoogle();
+    const myPrompt = await getSiteData(data[0]!);
 
-    const data = await getDataFromGoogle(); // Await the getDataFromGoogle function
-    return NextResponse.json(data);
+    const responseFromGemini = await model.generateContent(
+      `give me a great summary of this topic from context in a single paragraph, which is concise and doesn't loose too much valuable data. ${myPrompt}`
+    );
+    // const responseFromGemini = await model.generateContent(
+    //   `react compiler`
+    // );
+
+    console.log("function called")
+
+    return NextResponse.json({ data: responseFromGemini.response.text() });
   } catch (error) {
     console.error(error);
     return NextResponse.json(error, { status: 500 });

@@ -8,6 +8,7 @@ const FormattedContent = ({ children }: { children: string }) => {
       backgroundColor: "transparent",
       color: "white",
       lineHeight: "1.6",
+      width: "100%",
       maxWidth: "800px",
       margin: "0 auto",
       padding: "20px",
@@ -29,7 +30,11 @@ const FormattedContent = ({ children }: { children: string }) => {
     },
     list: {
       paddingLeft: "20px",
+      // paddingBottom:"10px",
       listDecoration: "bullet",
+    },
+    listItem: {
+      padding: "5px",
     },
     heading: {
       fontWeight: "bold",
@@ -45,6 +50,7 @@ const FormattedContent = ({ children }: { children: string }) => {
           h3: ({ node, ...props }) => (
             <h3 style={styles.sectionTitle} {...props} />
           ),
+          li: ({ node, ...props }) => <li style={styles.listItem} {...props} />,
           ul: ({ node, ...props }) => <ul style={styles.list} {...props} />,
           p: ({ node, ...props }) => <p style={styles.section} {...props} />,
         }}

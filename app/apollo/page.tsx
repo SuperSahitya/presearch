@@ -1,6 +1,6 @@
 "use client";
 import FormattedContent from "@/components/FormattedContent";
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { Body } from "../api/gemini/route";
 import { Button } from "@/components/ui/button";
@@ -13,39 +13,78 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SelectGroup, SelectLabel } from "@radix-ui/react-select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Page = () => {
   const { toast } = useToast();
   const { data: session, status } = useSession();
   const [error, setError] = useState("");
   const [manner, setManner] = useState("summarised");
+  const [loading, setLoading] = useState(false);
   const [contextFromSites, setContextSize] = useState(1);
   const [data, setData] = useState("");
   const [searchPrompt, setSearchPrompt] = useState("");
   async function scrapedSearch(searchPrompt: string) {
-    const response = await fetch("/api/gemini", {
-      method: "POST",
-      body: JSON.stringify({
-        contextFromSites,
-        manner,
-        searchPrompt: searchPrompt,
-      } as Body),
-    });
-    return await response.json();
-  }
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (searchPrompt == "") {
-      toast({ description: "search box is empty.", variant: "default" });
-      return;
+    try {
+      const response = await fetch("/api/gemini", {
+        method: "POST",
+        body: JSON.stringify({
+          contextFromSites,
+          manner,
+          searchPrompt: searchPrompt,
+        } as Body),
+      });
+      if (!response.ok) {
+        throw new Error("An Error Occured while Fetching Response.");
+      }
+      return await response.json();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      setError(errorMessage);
+      console.error(error);
     }
-    console.log("submitted");
-    const response = (await scrapedSearch(searchPrompt)) as {
-      data: string;
-      websites: string[];
-    };
-    console.log(response);
-    setData(response.data.replace("/n", "<br>"));
+  }
+  useEffect(() => {
+    toast({
+      title: "An Errr Occured",
+      variant: "destructive",
+      duration: 2000,
+      description: error,
+    });
+  }, [error]);
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    try {
+      e.preventDefault();
+      setData("");
+      setLoading(true);
+      if (searchPrompt == "") {
+        toast({
+          title: "Searchbox is Empty",
+          description: "Please search with a valid string.",
+          variant: "default",
+          duration: 1500,
+        });
+        return;
+      }
+      console.log("submitted");
+
+      const response = (await scrapedSearch(searchPrompt)) as {
+        data: string;
+        websites: string[];
+      };
+
+      console.log(response);
+      setData(response.data.replace("/n", "<br>"));
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      setError(errorMessage);
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleManner = (e: string) => {
@@ -58,7 +97,8 @@ const Page = () => {
   };
   return (
     <>
-      <main className="bg-zinc-950 w-screen min-h-screen p-10 flex flex-col justify-start gap-6 items-center">
+      <main className="bg-zinc-950 w-screen min-h-screen py-7 px-4 flex flex-col justify-start gap-6 items-center max-w-full text-zinc-50">
+        <h1 className="text-4xl font-mono font-extrabold">Apollo</h1>
         <form
           onSubmit={(e) => handleSubmit(e)}
           className="flex flex-row flex-wrap justify-center items-center gap-4 w-screen"
@@ -72,16 +112,19 @@ const Page = () => {
           ></Input>
           <Select
             onValueChange={(e) => handleManner(e)}
-            defaultValue="Summarised"
+            defaultValue="summarised"
           >
             <SelectTrigger className="w-40 bg-zinc-900 text-zinc-50">
               <SelectValue placeholder="Manner" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 text-zinc-50">
-              <SelectItem value="summarised" defaultChecked={true}>
-                Summarised
-              </SelectItem>
-              <SelectItem value="detailed">Detailed</SelectItem>
+              <SelectGroup>
+                <SelectLabel className="mb-1">Manner</SelectLabel>
+                <SelectItem value="summarised" defaultChecked={true}>
+                  Summarised
+                </SelectItem>
+                <SelectItem value="detailed">Detailed</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
           <Select onValueChange={(e) => handleContext(e)} defaultValue="1">
@@ -89,20 +132,37 @@ const Page = () => {
               <SelectValue placeholder="Context" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 text-zinc-50">
-              <SelectItem value="1">Default</SelectItem>
-              <SelectItem value="2" defaultChecked={true}>
-                Large
-              </SelectItem>
-              <SelectItem value="3" defaultChecked={true}>
-                Massive
-              </SelectItem>
+              <SelectGroup>
+                <SelectLabel className="mb-1">Context</SelectLabel>
+                <SelectItem value="1">Default</SelectItem>
+                <SelectItem value="2" defaultChecked={true}>
+                  Large
+                </SelectItem>
+                <SelectItem value="3" defaultChecked={true}>
+                  Massive
+                </SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
-          <Button variant={"outline"} type="submit">
+          <Button
+            variant={"outline"}
+            type="submit"
+            className="text-zinc-900 font-bold"
+          >
             Search
           </Button>
         </form>
-        <FormattedContent>{data}</FormattedContent>
+        {loading ? (
+          <div className="flex flex-col justify-center items-center gap-2 w-full mt-10">
+            <Skeleton className="max-w-[780px] w-2/3 h-6 bg-zinc-800"></Skeleton>
+            <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
+            <Skeleton className="max-w-[780px] w-3/4 h-6 bg-zinc-800"></Skeleton>
+            <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
+            <Skeleton className="max-w-[500px] w-3/4 h-6 bg-zinc-800"></Skeleton>
+          </div>
+        ) : (
+          <FormattedContent>{data}</FormattedContent>
+        )}
       </main>
     </>
   );

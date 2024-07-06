@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
 
 export interface Body {
   manner: "detailed" | "summarised";
@@ -9,7 +9,11 @@ export interface Body {
 }
 
 async function getDataFromGoogle(search: string) {
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    executablePath: process.env.CHROME_BIN || "/usr/bin/google-chrome",
+  });
   const page = await browser.newPage();
   await page.goto("https://www.google.com");
   page.setDefaultNavigationTimeout(2 * 60 * 1000);
@@ -41,7 +45,11 @@ async function getDataFromGoogle(search: string) {
 }
 
 async function getSiteData(url: string) {
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    executablePath: process.env.CHROME_BIN || "/usr/bin/google-chrome",
+  });
   const page = await browser.newPage();
   await page.goto(url);
   // page.setDefaultNavigationTimeout(12000);

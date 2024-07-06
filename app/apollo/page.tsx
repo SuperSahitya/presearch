@@ -1,6 +1,6 @@
 "use client";
 import FormattedContent from "@/components/FormattedContent";
-import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { Body } from "../api/gemini/route";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import { SelectGroup, SelectLabel } from "@radix-ui/react-select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Page = () => {
+  const componentRef = useRef(null);
+  const isFirstRender = useRef(true);
   const { toast } = useToast();
   const { data: session, status } = useSession();
   const [error, setError] = useState("");
@@ -47,12 +49,18 @@ const Page = () => {
     }
   }
   useEffect(() => {
-    toast({
-      title: "An Errr Occured",
-      variant: "destructive",
-      duration: 2000,
-      description: error,
-    });
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        duration: 2000,
+        description: error,
+      });
+    }
   }, [error]);
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     try {
@@ -95,77 +103,90 @@ const Page = () => {
     console.log(Number(e));
     setContextSize(Number(e));
   };
-  return (
-    <>
-      <main className="bg-zinc-950 w-screen min-h-screen py-7 px-4 flex flex-col justify-start gap-6 items-center max-w-full text-zinc-50">
-        <h1 className="text-4xl font-mono font-extrabold">Apollo</h1>
-        <form
-          onSubmit={(e) => handleSubmit(e)}
-          className="flex flex-row flex-wrap justify-center items-center gap-4 w-screen"
+  if (session && session.user && session.user.email) {
+    return (
+      <>
+        <main
+          ref={componentRef}
+          className="bg-zinc-950 w-screen min-h-custom py-7 px-4 flex flex-col justify-start gap-6 items-center max-w-full text-zinc-50"
         >
-          <Input
-            placeholder="Search with Apollo"
-            value={searchPrompt}
-            type="text"
-            className="w-1/3 bg-zinc-900 text-zinc-50 min-w-[350px]"
-            onChange={(e) => setSearchPrompt(e.target.value)}
-          ></Input>
-          <Select
-            onValueChange={(e) => handleManner(e)}
-            defaultValue="summarised"
+          <h1 className="text-4xl font-mono font-extrabold">Apollo</h1>
+          <form
+            onSubmit={(e) => handleSubmit(e)}
+            className="flex flex-row flex-wrap justify-center items-center gap-4 w-screen"
           >
-            <SelectTrigger className="w-40 bg-zinc-900 text-zinc-50">
-              <SelectValue placeholder="Manner" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 text-zinc-50">
-              <SelectGroup>
-                <SelectLabel className="mb-1">Manner</SelectLabel>
-                <SelectItem value="summarised" defaultChecked={true}>
-                  Summarised
-                </SelectItem>
-                <SelectItem value="detailed">Detailed</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <Select onValueChange={(e) => handleContext(e)} defaultValue="1">
-            <SelectTrigger className="w-40 bg-zinc-900 text-zinc-50">
-              <SelectValue placeholder="Context" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 text-zinc-50">
-              <SelectGroup>
-                <SelectLabel className="mb-1">Context</SelectLabel>
-                <SelectItem value="1">Default</SelectItem>
-                <SelectItem value="2" defaultChecked={true}>
-                  Large
-                </SelectItem>
-                <SelectItem value="3" defaultChecked={true}>
-                  Massive
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <Button
-            variant={"outline"}
-            type="submit"
-            className="text-zinc-900 font-bold"
-          >
-            Search
-          </Button>
-        </form>
-        {loading ? (
-          <div className="flex flex-col justify-center items-center gap-2 w-full mt-10">
-            <Skeleton className="max-w-[780px] w-2/3 h-6 bg-zinc-800"></Skeleton>
-            <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
-            <Skeleton className="max-w-[780px] w-3/4 h-6 bg-zinc-800"></Skeleton>
-            <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
-            <Skeleton className="max-w-[500px] w-3/4 h-6 bg-zinc-800"></Skeleton>
-          </div>
-        ) : (
-          <FormattedContent>{data}</FormattedContent>
-        )}
+            <Input
+              placeholder="Search with Apollo"
+              value={searchPrompt}
+              type="text"
+              className="w-1/3 bg-zinc-900 text-zinc-50 min-w-[350px]"
+              onChange={(e) => setSearchPrompt(e.target.value)}
+            ></Input>
+            <Select
+              onValueChange={(e) => handleManner(e)}
+              defaultValue="summarised"
+            >
+              <SelectTrigger className="w-40 bg-zinc-900 text-zinc-50">
+                <SelectValue placeholder="Manner" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 text-zinc-50">
+                <SelectGroup>
+                  <SelectLabel className="mb-1">Manner</SelectLabel>
+                  <SelectItem value="summarised" defaultChecked={true}>
+                    Summarised
+                  </SelectItem>
+                  <SelectItem value="detailed">Detailed</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Select onValueChange={(e) => handleContext(e)} defaultValue="1">
+              <SelectTrigger className="w-40 bg-zinc-900 text-zinc-50">
+                <SelectValue placeholder="Context" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 text-zinc-50">
+                <SelectGroup>
+                  <SelectLabel className="mb-1">Context</SelectLabel>
+                  <SelectItem value="1">Default</SelectItem>
+                  <SelectItem value="2" defaultChecked={true}>
+                    Large
+                  </SelectItem>
+                  <SelectItem value="3" defaultChecked={true}>
+                    Massive
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Button
+              variant={"outline"}
+              type="submit"
+              className="text-zinc-900 font-bold hover:bg-zinc-300"
+            >
+              Search
+            </Button>
+          </form>
+          {loading ? (
+            <div className="flex flex-col justify-center items-center gap-2 w-full mt-10">
+              <Skeleton className="max-w-[780px] w-2/3 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="max-w-[780px] w-3/4 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="max-w-[500px] w-3/4 h-6 bg-zinc-800"></Skeleton>
+            </div>
+          ) : (
+            <FormattedContent>{data}</FormattedContent>
+          )}
+        </main>
+      </>
+    );
+  } else {
+    return (
+      <main className="bg-zinc-950 w-screen min-h-screen py-7 px-4 flex flex-col justify-center gap-6 items-center max-w-full text-zinc-50">
+        <Button onClick={() => signIn("google")} variant={"default"}>
+          Log In
+        </Button>
       </main>
-    </>
-  );
+    );
+  }
 };
 
 export default Page;

@@ -4,6 +4,7 @@ import Image from "next/image";
 import React from "react";
 import { Button } from "./ui/button";
 import Link from "next/link";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 const Navbar = () => {
   const { data: session, status } = useSession();
@@ -23,9 +24,15 @@ const Navbar = () => {
               <Button onClick={() => signOut()} className="hover:bg-zinc-800">
                 Log Out
               </Button>
-              <Button className="hover:bg-zinc-800">
-                <Link href={"/profile"}>Profile</Link>
-              </Button>
+              <Link href={"/profile"}>
+                <Avatar>
+                  <AvatarImage
+                    src={session.user.image!}
+                    alt={session.user.email}
+                  />
+                  <AvatarFallback>@</AvatarFallback>
+                </Avatar>
+              </Link>
             </>
           ) : (
             <Button

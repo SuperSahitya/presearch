@@ -1,6 +1,7 @@
-# PreSearch
+# PreSearch 
+### Everything, Everywhere, All At Once
 
-<b>PreSearch</b> is the better way of getting concise inforbation about everything that can be known.
+<b>PreSearch</b> is the better way of getting concise information about everything that can be known.
 
 ## Project Setup
 

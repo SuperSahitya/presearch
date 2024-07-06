@@ -2,10 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import puppeteer from "puppeteer";
 
-interface Body {
-  identity: string;
+export interface Body {
+  manner: "detailed" | "summarised";
   searchPrompt: string;
-  role: string;
+  contextFromSites: 1 | 2;
 }
 
 async function getDataFromGoogle(search: string) {
@@ -53,6 +53,8 @@ async function getSiteData(url: string) {
     return document.querySelector("body")!.innerText;
   });
   console.log("Data scraped from website");
+  console.log(url);
+  // console.log(data);
   await browser.close();
   return data;
 }
@@ -66,8 +68,8 @@ export async function POST(request: NextRequest) {
     throw NextResponse.json("Failed to parse JSON body", { status: 400 });
   });
 
-  if (!body.identity) {
-    return NextResponse.json("Missing 'identity' in request body", {
+  if (!body.manner) {
+    return NextResponse.json("Missing 'manner' in request body", {
       status: 400,
     });
   }
@@ -78,31 +80,44 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (!body.role) {
-    return NextResponse.json("Missing 'role' in request body", { status: 400 });
+  if (!body.contextFromSites) {
+    return NextResponse.json("Missing 'contextFromSites' in request body", {
+      status: 400,
+    });
   }
 
-  const { searchPrompt, identity, role } = body;
+  const { searchPrompt, manner, contextFromSites } = body;
+  console.log(body);
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      systemInstruction: `You are an expert researcher.You should reply in concise and correct manner and produce great summary if necessary.`,
+      systemInstruction: `You are an expert researcher.You should reply should be highly ${manner}. You can also add your own input if you deem necessary. Donot include information unrelated to the ${searchPrompt}. Donot covey that the context you used are from articles. You can give details in point wise manner if necessary.`,
     });
 
     const websiteLinks = await getDataFromGoogle(searchPrompt);
-    const scrapedData = await getSiteData(websiteLinks[0]!);
+    const contextArray: string[] = [];
+    // const scrapedData = await getSiteData(websiteLinks[0]!);
+    // const scrapedData2 = await getSiteData(websiteLinks[1]!);
 
-    const responseFromGemini = await model.generateContent(
-      `give me a great summary of this topic from context in a single paragraph, which is concise and doesn't loose too much valuable data. ${scrapedData}`
-    );
+    for (let i = 0; i < contextFromSites; i++) {
+      contextArray.push(await getSiteData(websiteLinks[i]!));
+    }
+
+    // const responseFromGemini = await model.generateContent([
+    //   scrapedData,
+    //   scrapedData2,
+    // ]);
+
+    const responseFromGemini = await model.generateContent(contextArray);
 
     // const responseFromGemini = await model.generateContent(
     //   `react compiler`
     // );
 
     console.log("Gemini API called with the scraped data.");
+    // console.log(contextArray);
 
     return NextResponse.json({
       data: responseFromGemini.response.text(),

@@ -5,6 +5,8 @@ const FormattedContent = ({ children }: { children: string }) => {
   const styles = {
     container: {
       // fontFamily: "Inter",
+      backgroundColor: "transparent",
+      color: "white",
       lineHeight: "1.6",
       maxWidth: "800px",
       margin: "0 auto",
@@ -27,6 +29,7 @@ const FormattedContent = ({ children }: { children: string }) => {
     },
     list: {
       paddingLeft: "20px",
+      listDecoration: "bullet",
     },
     heading: {
       fontWeight: "bold",

@@ -5,7 +5,7 @@ import puppeteer from "puppeteer";
 export interface Body {
   manner: "detailed" | "summarised";
   searchPrompt: string;
-  contextFromSites: 1 | 2;
+  contextFromSites: 1 | 2 | 3;
 }
 
 async function getDataFromGoogle(search: string) {
@@ -89,11 +89,18 @@ export async function POST(request: NextRequest) {
   const { searchPrompt, manner, contextFromSites } = body;
   console.log(body);
 
+  const responseType = {
+    detailed:
+      "The response should be highly detailed and you can use points or subtopics to explain each aspect.",
+    summarised:
+      "The response should be highly summarised, preferably in a single paragraph and concise.",
+  };
+
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      systemInstruction: `You are an expert researcher.You should reply should be highly ${manner}. You can also add your own input if you deem necessary. Donot include information unrelated to the ${searchPrompt}. Donot covey that the context you used are from articles. You can give details in point wise manner if necessary.`,
+      systemInstruction: `You are an expert researcher. Use the prompt to answer about ${searchPrompt}. You can also add your own input if you deem necessary. Donot include information unrelated to the ${searchPrompt}. Donot covey that the context you used are from articles or mention article. You should reply should be highly ${manner}. Make sure the response answers about ${searchPrompt}. ${responseType[manner]}`,
     });
 
     const websiteLinks = await getDataFromGoogle(searchPrompt);

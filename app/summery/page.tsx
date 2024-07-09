@@ -2,7 +2,6 @@
 import FormattedContent from "@/components/FormattedContent";
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { Body } from "../api/gemini/route";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,6 +15,11 @@ import {
 import { SelectGroup, SelectLabel } from "@radix-ui/react-select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface Body {
+  websiteLink: string;
+  manner: "detailed" | "summarised";
+}
+
 const Page = () => {
   const componentRef = useRef(null);
   const isFirstRender = useRef(true);
@@ -24,17 +28,15 @@ const Page = () => {
   const [error, setError] = useState("");
   const [manner, setManner] = useState("summarised");
   const [loading, setLoading] = useState(false);
-  const [contextFromSites, setContextSize] = useState(1);
   const [data, setData] = useState("");
-  const [searchPrompt, setSearchPrompt] = useState("");
-  async function scrapedSearch(searchPrompt: string) {
+  const [websiteLink, setWebsiteLink] = useState("");
+  async function scrapedSearch(websiteLink: string) {
     try {
-      const response = await fetch("/api/gemini", {
+      const response = await fetch("/api/youtube", {
         method: "POST",
         body: JSON.stringify({
-          contextFromSites,
           manner,
-          searchPrompt: searchPrompt,
+          websiteLink: websiteLink,
         } as Body),
       });
       if (!response.ok) {
@@ -67,29 +69,30 @@ const Page = () => {
       e.preventDefault();
       setData("");
       setLoading(true);
-      if (searchPrompt == "") {
+      if (websiteLink == "") {
         toast({
-          title: "Searchbox is Empty",
-          description: "Please search with a valid string.",
-          variant: "default",
+          title: "Invalid URL",
+          description: "Please verify the youtube url.",
+          variant: "destructive",
           duration: 1500,
         });
         return;
       }
       console.log("submitted");
 
-      const response = (await scrapedSearch(searchPrompt)) as {
-        data: string;
-        websites: string[];
+      const response = (await scrapedSearch(websiteLink)) as {
+        url: string;
+        manner: "summarised" | "detailed" | "analysis";
+        summary: string;
       };
-      if (response.data == "" || !response.data) {
+
+      console.log(response);
+      if (response.summary == "" || !response.summary) {
         throw new Error(
           "An error occururd while analysing the video. Please try again"
         );
       }
-
-      console.log(response);
-      setData(response.data.replace("/n", "<br>"));
+      setData(response.summary.replace("/n", "<br>"));
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -104,10 +107,6 @@ const Page = () => {
     console.log(e);
     setManner(e);
   };
-  const handleContext = (e: string) => {
-    console.log(Number(e));
-    setContextSize(Number(e));
-  };
   if (session && session.user && session.user.email) {
     return (
       <>
@@ -115,17 +114,17 @@ const Page = () => {
           ref={componentRef}
           className="bg-zinc-950 w-screen min-h-custom py-7 px-4 flex flex-col justify-start gap-6 items-center max-w-full text-zinc-50"
         >
-          <h1 className="text-4xl font-mono font-extrabold">Apollo</h1>
+          <h1 className="text-4xl font-mono font-extrabold">Summery</h1>
           <form
             onSubmit={(e) => handleSubmit(e)}
             className="flex flex-row flex-wrap justify-center items-center gap-4 w-screen"
           >
             <Input
               placeholder="Search with Apollo"
-              value={searchPrompt}
+              value={websiteLink}
               type="text"
               className="w-1/3 bg-zinc-900 text-zinc-50 min-w-[350px]"
-              onChange={(e) => setSearchPrompt(e.target.value)}
+              onChange={(e) => setWebsiteLink(e.target.value)}
             ></Input>
             <Select
               onValueChange={(e) => handleManner(e)}
@@ -141,23 +140,7 @@ const Page = () => {
                     Summarised
                   </SelectItem>
                   <SelectItem value="detailed">Detailed</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Select onValueChange={(e) => handleContext(e)} defaultValue="1">
-              <SelectTrigger className="w-40 bg-zinc-900 text-zinc-50">
-                <SelectValue placeholder="Context" />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-900 text-zinc-50">
-                <SelectGroup>
-                  <SelectLabel className="mb-1">Context</SelectLabel>
-                  <SelectItem value="1">Default</SelectItem>
-                  <SelectItem value="2" defaultChecked={true}>
-                    Large
-                  </SelectItem>
-                  <SelectItem value="3" defaultChecked={true}>
-                    Massive
-                  </SelectItem>
+                  <SelectItem value="analysis">Analysis</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -166,7 +149,7 @@ const Page = () => {
               type="submit"
               className="text-zinc-900 font-bold hover:bg-zinc-300"
             >
-              Search
+              Summarise
             </Button>
           </form>
           {loading ? (

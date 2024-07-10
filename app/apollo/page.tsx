@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const Page = () => {
   const componentRef = useRef(null);
   const isFirstRender = useRef(true);
+  const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
   const { toast } = useToast();
   const { data: session, status } = useSession();
   const [error, setError] = useState("");
@@ -90,6 +91,7 @@ const Page = () => {
 
       console.log(response);
       setData(response.data.replace("/n", "<br>"));
+      setWebsiteLinks(response.websites);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -169,7 +171,7 @@ const Page = () => {
               Search
             </Button>
           </form>
-          {loading ? (
+          {loading && (
             <div className="flex flex-col justify-center items-center gap-2 w-full mt-10">
               <Skeleton className="max-w-[780px] w-2/3 h-6 bg-zinc-950"></Skeleton>
               <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
@@ -177,8 +179,17 @@ const Page = () => {
               <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
               <Skeleton className="max-w-[500px] w-3/4 h-6 bg-zinc-800"></Skeleton>
             </div>
-          ) : (
-            <FormattedContent>{data}</FormattedContent>
+          )}
+          {data && (
+            <>
+              <FormattedContent>{data}</FormattedContent>
+              <div>
+                <div>Context</div>
+                {websiteLinks.map((e, idx) => {
+                  return <div key={idx}>{e}</div>;
+                })}
+              </div>
+            </>
           )}
         </main>
       </>

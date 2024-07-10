@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import puppeteer from "puppeteer-core";
+import { type } from "os";
 
 export interface Body {
   manner: "detailed" | "summarised";
@@ -8,63 +9,89 @@ export interface Body {
   contextFromSites: 1 | 2 | 3;
 }
 
+function rearrangeUrls(urls: string[]) {
+  const targetIndex = urls.findIndex((url) =>
+    url!.startsWith("https://en.wikipedia.org/")
+  );
+
+  if (targetIndex > -1) {
+    const [targetUrl] = urls.splice(targetIndex, 1);
+    urls.unshift(targetUrl);
+  }
+
+  return urls;
+}
+
 async function getDataFromGoogle(search: string) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    executablePath: process.env.CHROME_BIN || "/usr/bin/google-chrome",
-  });
-  const page = await browser.newPage();
-  await page.goto("https://www.google.com");
-  page.setDefaultNavigationTimeout(2 * 60 * 1000);
+  try {
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      executablePath: process.env.CHROME_BIN || "/usr/bin/google-chrome",
+    });
+    const page = await browser.newPage();
+    await page.goto("https://www.google.com");
+    page.setDefaultNavigationTimeout(300000);
 
-  await page.setViewport({ width: 1080, height: 1024 });
+    await page.setViewport({ width: 1080, height: 1024 });
 
-  await page.waitForSelector("textarea");
-  await page.type("textarea", search);
-  await page.waitForSelector("input");
+    await page.waitForSelector("textarea");
+    await page.type("textarea", search);
+    await page.waitForSelector("input");
 
-  await page.keyboard.press("Enter");
+    await page.keyboard.press("Enter");
 
-  await page.waitForNavigation();
+    await page.waitForNavigation();
 
-  await page.waitForSelector("#rso a");
-  const fullLinks = await page.evaluate(() => {
-    const links = Array.from(
-      document.querySelectorAll("#rso a")
-    ) as HTMLElement[];
-    return links.map((link: HTMLElement) => link.getAttribute("href"));
-  });
+    await page.waitForSelector("#rso a");
+    const fullLinks = await page.evaluate(() => {
+      const links = Array.from(
+        document.querySelectorAll("#rso a")
+      ) as HTMLElement[];
+      return links.map((link: HTMLElement) => link.getAttribute("href"));
+    });
 
-  const requiredLinks = fullLinks
-    .filter((e) => e != "")
-    .filter((e) => !e?.startsWith("/search"));
-  console.log("Websites received from Google");
-  await browser.close();
-  return requiredLinks;
+    const requiredLinks = fullLinks.filter(
+      (e): e is string => e != null && e != "" && !e.startsWith("/search") && !e.startsWith("https://www.youtube.com/")
+    );
+    console.log("Websites received from Google");
+    console.log(requiredLinks);
+    await browser.close();
+
+    return rearrangeUrls(requiredLinks);
+  } catch (error) {
+    console.log(error);
+    throw new Error("An error occured while searching through web.");
+  }
 }
 
 async function getSiteData(url: string) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    executablePath: process.env.CHROME_BIN || "/usr/bin/google-chrome",
-  });
-  const page = await browser.newPage();
-  await page.goto(url);
-  // page.setDefaultNavigationTimeout(12000);
-  await page.setViewport({ width: 1080, height: 1024 });
+  try {
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      executablePath: process.env.CHROME_BIN || "/usr/bin/google-chrome",
+    });
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 300000 });
+    // page.setDefaultNavigationTimeout(12000);
+    await page.setDefaultNavigationTimeout(300000);
+    await page.setViewport({ width: 1080, height: 1024 });
 
-  // await page.waitForNavigation({ timeout: 12000 });
-  await page.waitForSelector("body");
-  const data = await page.evaluate(() => {
-    return document.querySelector("body")!.innerText;
-  });
-  console.log("Data scraped from website");
-  console.log(url);
-  // console.log(data);
-  await browser.close();
-  return data;
+    // await page.waitForNavigation({ timeout: 12000 });
+    await page.waitForSelector("body");
+    const data = await page.evaluate(() => {
+      return document.querySelector("body")!.innerText;
+    });
+    console.log("Data scraped from website");
+    console.log(url);
+    // console.log(data);
+    await browser.close();
+    return data;
+  } catch (error) {
+    console.log(error);
+    throw new Error("An error occured while searching through websites.");
+  }
 }
 
 export async function POST(request: NextRequest) {

@@ -52,7 +52,12 @@ async function getDataFromGoogle(search: string) {
     });
 
     const requiredLinks = fullLinks.filter(
-      (e): e is string => e != null && e != "" && !e.startsWith("/search") && !e.startsWith("https://www.youtube.com/")
+      (e): e is string =>
+        e != null &&
+        e != "" &&
+        !e.startsWith("/search") &&
+        !e.startsWith("https://www.youtube.com") &&
+        !e.startsWith("https://www.reddit.com")
     );
     console.log("Websites received from Google");
     console.log(requiredLinks);

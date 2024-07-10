@@ -82,7 +82,7 @@ const Page = () => {
         data: string;
         websites: string[];
       };
-      if (response.data == "" || !response.data) {
+      if (response.data == "" || !response.data || !response) {
         throw new Error(
           "An error occururd while analysing the video. Please try again"
         );
@@ -171,7 +171,7 @@ const Page = () => {
           </form>
           {loading ? (
             <div className="flex flex-col justify-center items-center gap-2 w-full mt-10">
-              <Skeleton className="max-w-[780px] w-2/3 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="max-w-[780px] w-2/3 h-6 bg-zinc-950"></Skeleton>
               <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
               <Skeleton className="max-w-[780px] w-3/4 h-6 bg-zinc-800"></Skeleton>
               <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>

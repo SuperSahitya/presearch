@@ -112,6 +112,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       url: captionsObject[0].baseUrl,
+      title: title,
+      creator: creator,
       caption: parsedCaption!.join(" "),
       summary: responseFromGemini.response.text(),
     });

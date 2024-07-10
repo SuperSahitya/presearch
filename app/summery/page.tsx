@@ -29,6 +29,8 @@ const Page = () => {
   const [manner, setManner] = useState("summarised");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState("");
+  const [title, setTitle] = useState("");
+  const [creator, setCreator] = useState("");
   const [websiteLink, setWebsiteLink] = useState("");
 
   function extractVideoID(url: string) {
@@ -93,17 +95,21 @@ const Page = () => {
 
       const response = (await scrapedSearch(videoURL)) as {
         url: string;
-        manner: "summarised" | "detailed" | "analysis";
+        caption: string;
+        title: string;
+        creator: string;
         summary: string;
       };
 
       console.log(response);
-      if (response.summary == "" || !response.summary) {
+      if (response.summary == "" || !response.summary || !response) {
         throw new Error(
-          "An error occururd while analysing the video. Please try again"
+          "An error occurured while analysing the video. Please try again"
         );
       }
       setData(response.summary.replace("/n", "<br>"));
+      setTitle(response.title);
+      setCreator(response.creator);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -163,19 +169,26 @@ const Page = () => {
               Summarise
             </Button>
           </form>
-          {loading ? (
+          {loading && (
             <div className="flex flex-col justify-center items-center gap-2 w-full mt-10">
-              <Skeleton className="sm:w-[50vw] aspect-video w-[80vw] max-w-[500px] mb-8"></Skeleton>
-              <Skeleton className="max-w-[780px] w-2/3 h-6 bg-zinc-800"></Skeleton>
               <Skeleton className="max-w-[700px] w-3/4 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="max-w-[600px] w-2/3 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="sm:w-[50vw] aspect-video w-[80vw] max-w-[500px] mb-8 mt-8"></Skeleton>
+              <Skeleton className="max-w-[780px] w-3/4 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="max-w-[700px] w-2/3 h-6 bg-zinc-800"></Skeleton>
             </div>
-          ) : (
+          )}
+          {data && (
             <>
+              <div className="mt-10">
+                <div className="text-xl font-bold">{title}</div>
+                <div className="text-lg">{`By ${creator}`}</div>
+              </div>
               <iframe
                 src={`https://www.youtube.com/embed/${extractVideoID(
                   websiteLink
                 )}`}
-                className="sm:w-[50vw] aspect-video w-[80vw] max-w-[500px] mt-10"
+                className="sm:w-[50vw] aspect-video w-[80vw] max-w-[500px]"
               ></iframe>
               <FormattedContent>{data}</FormattedContent>
             </>

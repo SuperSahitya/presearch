@@ -30,6 +30,14 @@ const Page = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState("");
   const [websiteLink, setWebsiteLink] = useState("");
+
+  function extractVideoID(url: string) {
+    const regex =
+      /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|.+\?v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  }
+
   async function scrapedSearch(websiteLink: string) {
     try {
       const response = await fetch("/api/youtube", {
@@ -80,7 +88,10 @@ const Page = () => {
       }
       console.log("submitted");
 
-      const response = (await scrapedSearch(websiteLink)) as {
+      const videoID = extractVideoID(websiteLink);
+      const videoURL = `https://youtu.be/${videoID}`;
+
+      const response = (await scrapedSearch(videoURL)) as {
         url: string;
         manner: "summarised" | "detailed" | "analysis";
         summary: string;
@@ -154,14 +165,20 @@ const Page = () => {
           </form>
           {loading ? (
             <div className="flex flex-col justify-center items-center gap-2 w-full mt-10">
+              <Skeleton className="sm:w-[50vw] aspect-video w-[80vw] max-w-[500px] mb-8"></Skeleton>
               <Skeleton className="max-w-[780px] w-2/3 h-6 bg-zinc-800"></Skeleton>
-              <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
-              <Skeleton className="max-w-[780px] w-3/4 h-6 bg-zinc-800"></Skeleton>
-              <Skeleton className="max-w-[780px] w-11/12 h-6 bg-zinc-800"></Skeleton>
-              <Skeleton className="max-w-[500px] w-3/4 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="max-w-[700px] w-3/4 h-6 bg-zinc-800"></Skeleton>
             </div>
           ) : (
-            <FormattedContent>{data}</FormattedContent>
+            <>
+              <iframe
+                src={`https://www.youtube.com/embed/${extractVideoID(
+                  websiteLink
+                )}`}
+                className="sm:w-[50vw] aspect-video w-[80vw] max-w-[500px] mt-10"
+              ></iframe>
+              <FormattedContent>{data}</FormattedContent>
+            </>
           )}
         </main>
       </>

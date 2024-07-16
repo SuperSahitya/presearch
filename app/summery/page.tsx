@@ -27,6 +27,7 @@ const Page = () => {
   const { data: session, status } = useSession();
   const [error, setError] = useState("");
   const [manner, setManner] = useState("summarised");
+  const [context, setContext] = useState("website");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState("");
   const [title, setTitle] = useState("");
@@ -40,7 +41,7 @@ const Page = () => {
     return match ? match[1] : null;
   }
 
-  async function scrapedSearch(websiteLink: string) {
+  async function youtubeScraper(websiteLink: string) {
     try {
       const response = await fetch("/api/youtube", {
         method: "POST",
@@ -60,6 +61,28 @@ const Page = () => {
       console.error(error);
     }
   }
+
+  async function websiteScraper(websiteLink: string) {
+    try {
+      const response = await fetch("/api/site", {
+        method: "POST",
+        body: JSON.stringify({
+          manner,
+          url: websiteLink,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("An Error Occured while Fetching Response.");
+      }
+      return await response.json();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      setError(errorMessage);
+      console.error(error);
+    }
+  }
+
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -75,54 +98,95 @@ const Page = () => {
     }
   }, [error]);
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    try {
-      e.preventDefault();
-      setData("");
-      setLoading(true);
-      if (websiteLink == "") {
-        toast({
-          title: "Invalid URL",
-          description: "Please verify the youtube url.",
-          variant: "destructive",
-          duration: 1500,
-        });
-        return;
+    e.preventDefault();
+    if (context == "youtube") {
+      try {
+        setData("");
+        setLoading(true);
+        if (websiteLink == "") {
+          toast({
+            title: "Invalid URL",
+            description: "Please verify the youtube url.",
+            variant: "destructive",
+            duration: 1500,
+          });
+          return;
+        }
+        console.log("submitted");
+
+        const videoID = extractVideoID(websiteLink);
+        const videoURL = `https://youtu.be/${videoID}`;
+
+        const response = (await youtubeScraper(videoURL)) as {
+          url: string;
+          caption: string;
+          title: string;
+          creator: string;
+          summary: string;
+        };
+
+        console.log(response);
+        if (response.summary == "" || !response.summary || !response) {
+          throw new Error(
+            "An error occurured while analysing the video. Please try again"
+          );
+        }
+        setData(response.summary.replace("/n", "<br>"));
+        setTitle(response.title);
+        setCreator(response.creator);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        setError(errorMessage);
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
-      console.log("submitted");
+    } else if (context == "website") {
+      try {
+        setData("");
+        setLoading(true);
+        if (websiteLink == "") {
+          toast({
+            title: "Invalid URL",
+            description: "Please verify the youtube url.",
+            variant: "destructive",
+            duration: 1500,
+          });
+          return;
+        }
+        console.log("submitted");
 
-      const videoID = extractVideoID(websiteLink);
-      const videoURL = `https://youtu.be/${videoID}`;
+        const response = (await websiteScraper(websiteLink)) as {
+          data: string;
+        };
 
-      const response = (await scrapedSearch(videoURL)) as {
-        url: string;
-        caption: string;
-        title: string;
-        creator: string;
-        summary: string;
-      };
-
-      console.log(response);
-      if (response.summary == "" || !response.summary || !response) {
-        throw new Error(
-          "An error occurured while analysing the video. Please try again"
-        );
+        console.log(response);
+        if (!response) {
+          throw new Error(
+            "An error occurured while analysing the video. Please try again"
+          );
+        }
+        setData(response.data.replace("/n", "<br>"));
+        setCreator(websiteLink);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        setError(errorMessage);
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
-      setData(response.summary.replace("/n", "<br>"));
-      setTitle(response.title);
-      setCreator(response.creator);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      setError(errorMessage);
-      console.error(error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleManner = (e: string) => {
     console.log(e);
     setManner(e);
+  };
+  const handleContext = (e: string) => {
+    console.log(e);
+    setContext(e);
   };
   if (session && session.user && session.user.email) {
     return (
@@ -131,7 +195,7 @@ const Page = () => {
           ref={componentRef}
           className="bg-zinc-950 w-screen min-h-custom py-7 px-4 flex flex-col justify-start gap-6 items-center max-w-full text-zinc-50"
         >
-          <h1 className="text-4xl font-mono font-extrabold">Summery</h1>
+          <h1 className="text-4xl font-mono font-extrabold">Summry</h1>
           <form
             onSubmit={(e) => handleSubmit(e)}
             className="flex flex-row flex-wrap justify-center items-center gap-4 w-screen"
@@ -143,6 +207,23 @@ const Page = () => {
               className="w-1/3 bg-zinc-900 text-zinc-50 min-w-[350px]"
               onChange={(e) => setWebsiteLink(e.target.value)}
             ></Input>
+            <Select
+              onValueChange={(e) => handleContext(e)}
+              defaultValue="youtube"
+            >
+              <SelectTrigger className="w-40 bg-zinc-900 text-zinc-50">
+                <SelectValue placeholder="Context" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 text-zinc-50">
+                <SelectGroup>
+                  <SelectLabel className="mb-1">Context</SelectLabel>
+                  <SelectItem value="youtube" defaultChecked={true}>
+                    Youtube
+                  </SelectItem>
+                  <SelectItem value="webiste">Website</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             <Select
               onValueChange={(e) => handleManner(e)}
               defaultValue="summarised"

@@ -70,7 +70,7 @@ async function getDataFromGoogle(search: string) {
   }
 }
 
-async function getSiteData(url: string) {
+export async function getSiteData(url: string) {
   try {
     const browser = await puppeteer.launch({
       headless: true,

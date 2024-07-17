@@ -16,7 +16,9 @@ export default function Home() {
         <div className="w-11/12 bg-zinc-800 rounded-md p-4 flex flex-col justify-center items-center gap-4 mt-4 sm:w-3/4">
           <div className="flex w-full justify-between gap-1 flex-col sm:flex-row">
             <Link href={"/apollo"}>
-              <Button className="text-xl w-full hover:bg-zinc-950">Apollo</Button>
+              <Button className="text-lg w-full hover:bg-zinc-950">
+                Apòllo
+              </Button>
             </Link>
             <div className="text-base text-zinc-200 font-bold flex justify-center items-center">
               AI Powered Search Engine
@@ -24,18 +26,22 @@ export default function Home() {
           </div>
           <div className="flex w-full justify-between flex-col gap-1 sm:flex-row">
             <Link href={"/summery"}>
-              <Button className="text-xl w-full hover:bg-zinc-950">Summery</Button>
+              <Button className="text-lg w-full hover:bg-zinc-950">
+                Summèry
+              </Button>
             </Link>
             <div className="text-base text-zinc-200 font-bold flex justify-center items-center">
-              Summarise YouTube Videos
+              Summarise YouTube Videos or Articles
             </div>
           </div>
           <div className="flex w-full justify-between flex-col gap-1 sm:flex-row">
-            <Link href={"Preader"}>
-              <Button className="text-xl w-full hover:bg-zinc-950">Preader</Button>
+            <Link href={"rephrase"}>
+              <Button className="text-lg w-full hover:bg-zinc-950">
+                Reṗhrase
+              </Button>
             </Link>
             <div className=" text-zinc-200 font-bold flex justify-center items-center">
-              Summarise PDFs
+              Rephrase Paragraphs
             </div>
           </div>
         </div>

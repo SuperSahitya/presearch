@@ -117,7 +117,7 @@ const Page = () => {
           ref={componentRef}
           className="bg-zinc-950 w-screen min-h-custom py-7 px-4 flex flex-col justify-start gap-6 items-center max-w-full text-zinc-50"
         >
-          <h1 className="text-4xl font-mono font-extrabold">Apollo</h1>
+          <h1 className="text-4xl font-mono font-extrabold">Apòllo</h1>
           <form
             onSubmit={(e) => handleSubmit(e)}
             className="flex flex-row flex-wrap justify-center items-center gap-4 w-screen"

@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface Body {
   url: string;
-  manner: "detailed" | "summarised";
+  manner: "detailed" | "summarised" | "analysis";
 }
 
 export async function POST(request: NextRequest) {
@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
       "The response should be highly detailed and you can use points or subtopics to explain each aspect.",
     summarised:
       "The response should be highly summarised, preferably in a single paragraph and concise.",
+    analysis:
+      "The respone should be a detailed analysis of article for correctness or factual inaccuracies.",
   };
 
   try {

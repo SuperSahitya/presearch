@@ -27,7 +27,7 @@ const Page = () => {
   const { data: session, status } = useSession();
   const [error, setError] = useState("");
   const [manner, setManner] = useState("summarised");
-  const [context, setContext] = useState("website");
+  const [context, setContext] = useState("youtube");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState("");
   const [title, setTitle] = useState("");
@@ -97,23 +97,31 @@ const Page = () => {
       });
     }
   }, [error]);
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (context == "youtube") {
+    setData("");
+    setLoading(true);
+    if (websiteLink == "") {
+      toast({
+        title: "Invalid URL",
+        description: "Please verify the youtube url.",
+        variant: "destructive",
+        duration: 1500,
+      });
+      return;
+    }
+    console.log("submitted");
+    if (websiteLink.startsWith("https://www.youtube.com")) {
+      setContext("youtube");
+    } else {
+      setContext("website");
+    }
+    const currentContext = websiteLink.startsWith("https://www.youtube.com")
+      ? "youtube"
+      : "website";
+    if (currentContext == "youtube") {
       try {
-        setData("");
-        setLoading(true);
-        if (websiteLink == "") {
-          toast({
-            title: "Invalid URL",
-            description: "Please verify the youtube url.",
-            variant: "destructive",
-            duration: 1500,
-          });
-          return;
-        }
-        console.log("submitted");
-
         const videoID = extractVideoID(websiteLink);
         const videoURL = `https://youtu.be/${videoID}`;
 
@@ -142,21 +150,8 @@ const Page = () => {
       } finally {
         setLoading(false);
       }
-    } else if (context == "website") {
+    } else if (currentContext == "website") {
       try {
-        setData("");
-        setLoading(true);
-        if (websiteLink == "") {
-          toast({
-            title: "Invalid URL",
-            description: "Please verify the youtube url.",
-            variant: "destructive",
-            duration: 1500,
-          });
-          return;
-        }
-        console.log("submitted");
-
         const response = (await websiteScraper(websiteLink)) as {
           data: string;
         };
@@ -168,7 +163,7 @@ const Page = () => {
           );
         }
         setData(response.data.replace("/n", "<br>"));
-        setCreator(websiteLink);
+        // setCreator(websiteLink);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -186,6 +181,9 @@ const Page = () => {
   };
   const handleContext = (e: string) => {
     console.log(e);
+    setData("");
+    setCreator("");
+    setTitle("");
     setContext(e);
   };
   if (session && session.user && session.user.email) {
@@ -208,6 +206,7 @@ const Page = () => {
               onChange={(e) => setWebsiteLink(e.target.value)}
             ></Input>
             <Select
+              value={context}
               onValueChange={(e) => handleContext(e)}
               defaultValue="youtube"
             >
@@ -220,7 +219,7 @@ const Page = () => {
                   <SelectItem value="youtube" defaultChecked={true}>
                     Youtube
                   </SelectItem>
-                  <SelectItem value="webiste">Website</SelectItem>
+                  <SelectItem value="website">Website</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -250,7 +249,7 @@ const Page = () => {
               Summarise
             </Button>
           </form>
-          {loading && (
+          {context == "youtube" && loading && (
             <div className="flex flex-col justify-center items-center gap-2 w-full mt-10">
               <Skeleton className="max-w-[700px] w-3/4 h-6 bg-zinc-800"></Skeleton>
               <Skeleton className="max-w-[600px] w-2/3 h-6 bg-zinc-800"></Skeleton>
@@ -259,7 +258,13 @@ const Page = () => {
               <Skeleton className="max-w-[700px] w-2/3 h-6 bg-zinc-800"></Skeleton>
             </div>
           )}
-          {data && (
+          {context == "website" && loading && (
+            <div className="flex flex-col justify-center items-center gap-2 w-full mt-10">
+              <Skeleton className="max-w-[780px] w-3/4 h-6 bg-zinc-800"></Skeleton>
+              <Skeleton className="max-w-[700px] w-2/3 h-6 bg-zinc-800"></Skeleton>
+            </div>
+          )}
+          {context == "youtube" && data && (
             <>
               <div className="mt-10">
                 <div className="text-xl font-bold">{title}</div>
@@ -271,6 +276,11 @@ const Page = () => {
                 )}`}
                 className="sm:w-[50vw] aspect-video w-[80vw] max-w-[500px]"
               ></iframe>
+              <FormattedContent>{data}</FormattedContent>
+            </>
+          )}
+          {context == "website" && data && (
+            <>
               <FormattedContent>{data}</FormattedContent>
             </>
           )}
